@@ -1,0 +1,15 @@
+# Verwende ein Python-Image
+FROM python:3.9-slim
+
+# Arbeitsverzeichnis festlegen
+WORKDIR /app
+
+# Abhängigkeiten installieren
+COPY requirements.txt requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Skript kopieren
+COPY migrate.py migrate.py
+
+# Skript ausführen
+CMD ["python", "migrate.py"]

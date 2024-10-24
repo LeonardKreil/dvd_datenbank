@@ -1,0 +1,75 @@
+# version: "3.9" Bei neueren Versionen von Docker Compose nicht mehr notwendig
+
+networks:
+    backend:
+        external: true
+
+services:
+  postgres_db:
+    container_name: postgresdb
+    image: postgres:13
+
+    environment:
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "1234"
+      POSTGRES_DB: "dvdrental"
+
+    ports:
+      - "5432:5432"
+    networks:
+      - "backend"
+
+  postgres_seed:
+      container_name: postgresseed
+      image: postgres:13
+      environment:
+          POSTGRES_HOST_AUTH_METHOD: "trust"
+          PGPASSWORD: "1234"
+      volumes:
+          - ./postgres/dvdrental.tar:/tmp/dvdrental.tar:ro
+      entrypoint: [ "bash", "-c", "sleep 10 && pg_restore -h postgresdb -U postgres -d dvdrental /tmp/dvdrental.tar" ]
+      restart: "no"
+      networks:
+        - "backend"
+      depends_on:
+        - "postgres_db"
+
+
+  adminer:
+    container_name: adminer
+    image: adminer
+    networks:
+      - "backend"
+    ports:
+      - "${UI_PORT?}:8080"
+
+  nosql_db:
+    container_name: nosql
+    image: alpine:latest
+    ports:
+        - "80:80"
+    networks:
+        - "backend"
+    depends_on:
+        - "postgres_seed"
+
+  mongodb:
+    container_name: mongodb
+    image: mongo
+    ports:
+      - "27017:27017"
+    networks:
+      - "backend"
+
+  data_migration:
+    build:
+      context: ./data_migration
+    container_name: data_migration
+    depends_on:
+      - postgres_db
+      - mongodb
+    environment:
+      MONGODB_URI: "mongodb://mongodb:27017/mydatabase"
+    networks:
+      - "backend"
+
