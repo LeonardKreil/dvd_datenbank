@@ -9,7 +9,14 @@ COPY requirements.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Skript kopieren
+# COPY wait_for_postgres.sh .
 COPY migrate.py migrate.py
 
-# Skript ausführen
+# Mache das Skript ausführbar
+# RUN chmod +x wait_for_postgres.sh
+
+# Setze den Einstiegspunkt auf das Warte-Skript und das Haupt-Skript
+# ENTRYPOINT ["./wait_for_postgres.sh"]
 CMD ["python", "migrate.py"]
+
+

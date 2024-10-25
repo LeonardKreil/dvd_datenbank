@@ -8,16 +8,20 @@ services:
   postgres_db:
     container_name: postgresdb
     image: postgres:13
-
     environment:
       POSTGRES_USER: "postgres"
       POSTGRES_PASSWORD: "1234"
       POSTGRES_DB: "dvdrental"
-
     ports:
       - "5432:5432"
     networks:
       - "backend"
+    restart: "always"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   postgres_seed:
       container_name: postgresseed
@@ -27,13 +31,12 @@ services:
           PGPASSWORD: "1234"
       volumes:
           - ./postgres/dvdrental.tar:/tmp/dvdrental.tar:ro
-      entrypoint: [ "bash", "-c", "sleep 10 && pg_restore -h postgresdb -U postgres -d dvdrental /tmp/dvdrental.tar" ]
+      entrypoint: [ "bash", "-c", "sleep 10 && pg_restore -h postgresdb -U postgres -d dvdrental /tmp/dvdrental.tar && tail -f /dev/null" ]
       restart: "no"
       networks:
         - "backend"
       depends_on:
         - "postgres_db"
-
 
   adminer:
     container_name: adminer
@@ -66,8 +69,9 @@ services:
       context: ./data_migration
     container_name: data_migration
     depends_on:
-      - postgres_db
-      - mongodb
+    
+      postgres_db: # Abhängigkeit von postgres_db
+        condition: service_healthy  # Warte, bis der Service gesund ist
     environment:
       MONGODB_URI: "mongodb://mongodb:27017/mydatabase"
     networks:
