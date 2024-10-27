@@ -1,8 +1,8 @@
-import pandas as pd
-import psycopg2
+import pandas as pd # type: ignore
+import psycopg2 # type: ignore
 import time
-from psycopg2 import OperationalError
-from pymongo import MongoClient
+from psycopg2 import OperationalError # type: ignore
+from pymongo import MongoClient # type: ignore
 import datetime
 
 def handle_memoryview(data_frame):
@@ -46,12 +46,6 @@ while True:
 # MongoDB-Verbindung
 mongo_client = MongoClient('mongodb://mongodb:27017/')
 mongo_db = mongo_client['dvdrental']  # MongoDB-Datenbank 'dvdrental'
-
-# Testen, ob die MongoDB-Verbindung funktioniert, indem ein Test-Dokument eingefügt wird
-mongo_collection = mongo_db["test"]
-mongo_collection.insert_one({"status": "MongoDB connection successful"})
-print("Test document inserted in MongoDB.")  # Debug-Log für erfolgreiche MongoDB-Verbindung
-
 
 # Tabellenliste aus PostgreSQL abrufen
 pg_cursor = pg_conn.cursor()

@@ -1,0 +1,19 @@
+# Verwende ein Python-Image
+FROM python:3.9-slim
+
+# Arbeitsverzeichnis festlegen
+WORKDIR /app
+
+# Abhängigkeiten installieren
+COPY requirements.txt requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Skript kopieren
+# COPY wait_for_postgres.sh .
+COPY read.py read.py
+
+# Mache das Skript ausführbar
+# RUN chmod +x wait_for_postgres.sh
+
+# Setze den Einstiegspunkt auf das Warte-Skript und das Haupt-Skript
+CMD ["python", "read.py"]

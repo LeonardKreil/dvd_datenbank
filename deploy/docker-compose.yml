@@ -69,11 +69,27 @@ services:
       context: ./data_migration
     container_name: data_migration
     depends_on:
-    
       postgres_db: # Abhängigkeit von postgres_db
         condition: service_healthy  # Warte, bis der Service gesund ist
+      mongodb:
+        condition: service_started
     environment:
       MONGODB_URI: "mongodb://mongodb:27017/mydatabase"
     networks:
       - "backend"
+
+  data_read:
+    build:
+      context: ./data_read  # Verweist auf den Dockerfile-Pfad in `data_migration`
+    container_name: data_read
+    depends_on:
+      data_migration:
+        condition: service_completed_successfully  # Startet erst, wenn data_migration beendet ist
+      mongodb:
+        condition: service_started
+    environment:
+      MONGODB_URI: "mongodb://mongodb:27017/mydatabase"
+    # command: ["python", "/app/data_read/read.py"]
+    networks:
+      - backend
 
