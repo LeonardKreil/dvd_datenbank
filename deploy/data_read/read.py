@@ -206,8 +206,7 @@ def top_categories():
         print(f"Kategorie {category['_id'].ljust(10)}: {category['total_rentals']} Entleihungen")
     return result
 
-from prettytable import PrettyTable
-
+#i. Eine Sicht auf die Kunden mit allen relevanten Informationen wie im View customer_l
 def customer_view():
     """
     Erstellt eine Sicht der Kunden mit allen relevanten Informationen, ähnlich dem View „customer_list“,
