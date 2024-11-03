@@ -64,12 +64,13 @@ services:
     networks:
       - "backend"
 
-  data_migration:
+  data_processing:  # Kombinierter Service für alle Datenoperationen
     build:
-      context: ./data_migration
-    container_name: data_migration
+      context: .
+      dockerfile: Dockerfile
+    container_name: data_processing
     depends_on:
-      postgres_db: # Abhängigkeit von postgres_db
+      postgres_db:
         condition: service_healthy  # Warte, bis der Service gesund ist
       mongodb:
         condition: service_started
@@ -78,18 +79,53 @@ services:
     networks:
       - "backend"
 
-  data_read:
-    build:
-      context: ./data_read  # Verweist auf den Dockerfile-Pfad in `data_migration`
-    container_name: data_read
-    depends_on:
-      data_migration:
-        condition: service_completed_successfully  # Startet erst, wenn data_migration beendet ist
-      mongodb:
-        condition: service_started
-    environment:
-      MONGODB_URI: "mongodb://mongodb:27017/mydatabase"
-    # command: ["python", "/app/data_read/read.py"]
-    networks:
-      - backend
+  # data_migration:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: data_migration
+  #   depends_on:
+  #     postgres_db: # Abhängigkeit von postgres_db
+  #       condition: service_healthy  # Warte, bis der Service gesund ist
+  #     mongodb:
+  #       condition: service_started
+  #   environment:
+  #     MONGODB_URI: "mongodb://mongodb:27017/mydatabase"
+  #   networks:
+  #     - "backend"
+  #   command: ["sh", "-c", "python data_migration/migrate.py && python data_read/read.py && python data_update/update.py"]
 
+  # data_read:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: data_read
+  #   depends_on:
+  #     data_migration:
+  #       condition: service_completed_successfully  # Startet erst, wenn data_migration beendet ist
+  #     mongodb:
+  #       condition: service_started
+  #   environment:
+  #     MONGODB_URI: "mongodb://mongodb:27017/mydatabase"
+  #   # command: ["python", "/app/data_read/read.py"]
+  #   networks:
+  #     - backend
+    
+
+  # data_update:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: data_update
+  #   depends_on:
+  #     data_migration:
+  #       condition: service_completed_successfully  # Startet erst, wenn data_migration beendet ist
+  #     data_read:
+  #       condition: service_completed_successfully
+  #     mongodb:
+  #       condition: service_started
+  #   environment:
+  #     MONGODB_URI: "mongodb://mongodb:27017/mydatabase"
+  #   # command: ["python", "/app/data_read/read.py"]
+  #   networks:
+  #     - backend

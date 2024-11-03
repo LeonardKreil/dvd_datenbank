@@ -1,7 +1,12 @@
 import random
 import string
 import hashlib
-from pymongo import MongoClient # type: ignore
+import sys
+import os
+
+# Get the parent directory and append it to sys.path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from db_connection import MongoDBSingleton  
 
 def generate_secure_password(length=12):
     """
@@ -83,11 +88,11 @@ def verify_new_store_and_inventory():
     else:
         print("Neuer Standort nicht gefunden.")
 
-# Verbindung zur NoSQL-Datenbank herstellen
-client = MongoClient("mongodb://mongodb:27017/") #TODO: Vllt eine klasse erstellen die die verbindung zur datenbank macht das man die verbindung nicht jedes mal neu machen muss
-mongo_db = client['dvdrental']
+# Establish a connection to the NoSQL database
+mongo_db = MongoDBSingleton.get_instance()
 
 # Funktionen aufrufen
+verify_staff_passwords()
 update_staff_passwords()
 verify_staff_passwords()
 
