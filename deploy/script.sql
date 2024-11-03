@@ -75,3 +75,10 @@ GROUP BY inventory.store_id;
 SELECT COUNT(*) AS short_films
 FROM film
 WHERE length < 60;
+
+-- m Anazahl an Entleihungen von Kurzfilmen
+SELECT COUNT(*) AS total_short_film_rentals
+FROM rental
+JOIN inventory ON rental.inventory_id = inventory.inventory_id
+JOIN film ON inventory.film_id = film.film_id
+WHERE film.length < 60;
