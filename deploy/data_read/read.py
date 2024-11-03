@@ -1,269 +1,346 @@
 from pymongo import MongoClient # type: ignore
 from prettytable import PrettyTable # type: ignore
+import sys
+import os
 
-# a. Gesamtanzahl der verfügbaren Filme
+# Get the parent directory and append it to sys.path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from db_connection import MongoDBSingleton
+
+# a. Total number of available films
 def total_films():
     """
-    Berechnet die Gesamtanzahl der verfügbaren Filme.
+    Calculates the total number of available films.
     
-    Rückgabe:
-        int: Gesamtanzahl der Filme
+    Returns:
+        int: Total number of films.
     """
+
     count = mongo_db.film.count_documents({})
-    print(f"Gesamtanzahl der verfügbaren Filme: {count}")
+
+    # Output
+    print("A: ")
+    command = "mongo_db.film.count_documents({})"
+    print(f"Command: {command}")
+    print(f"Total number of available films: {count}")
+    print()
     return count
 
-# b. Anzahl der unterschiedlichen Filme je Standort
+# b. Number of unique films per location
 def films_per_location():
     """
-    Berechnet die Anzahl der unterschiedlichen Filme pro Standort.
+    Calculates the number of unique film titles per location in MongoDB.
     
-    Rückgabe:
-        list: Eine Liste von Dokumenten mit Standort-IDs und jeweiliger Filmanzahl
+    Returns:
+        list: A list of documents with store IDs and the count of unique film titles per store.
     """
     pipeline = [
-        {"$group": {"_id": "$store_id", "film_count": {"$sum": 1}}}  # Gruppiert nach Standort-ID und zählt die Filme
+        # Step 1: Join the `inventory` collection with `film` to get the title for each `film_id`
+        {"$lookup": {
+            "from": "film",
+            "localField": "film_id",
+            "foreignField": "film_id",
+            "as": "film_details"
+        }},
+        {"$unwind": "$film_details"},  # Unwind `film_details` to access the title directly
+        
+        # Step 2: Group by store and title so each title is counted only once per store
+        {"$group": {"_id": {"store_id": "$store_id", "title": "$film_details.title"}}},
+        
+        # Step 3: Group by store and count unique titles per store
+        {"$group": {"_id": "$_id.store_id", "films_per_store": {"$sum": 1}}}
     ]
+
     result = list(mongo_db.inventory.aggregate(pipeline))
-    
-    print("Anzahl der unterschiedlichen Filme je Standort:")
+
+    # Output
+    print("B: ")
+    command = f"mongo_db.inventory.aggregate({pipeline})"
+    print(f"Command: {command}")
+    print("Number of unique films per location:")
     for entry in result:
-        print(f"Standort {entry['_id']}: {entry['film_count']} Filme")
+        print(f"Store {entry['_id']}: {entry['films_per_store']} films")
+    print()
+    
     return result
 
-# c. Die 10 Schauspieler mit den meisten Filmen, absteigend sortiert
+# c. The top 10 actors with the most films, sorted in descending order
 def top_actors():
     """
-    Findet die 10 Schauspieler mit den meisten Filmen und gibt ihre Namen und die Filmanzahl zurück,
-    absteigend sortiert.
+    Finds the top 10 actors with the most films and returns their names and film counts,
+    sorted in descending order.
     
-    Rückgabe:
-        list: Eine Liste von Dokumenten mit Schauspieler-IDs und Filmanzahl
+    Returns:
+        list: A list of documents with actor IDs and film counts.
     """
     pipeline = [
-        {"$group": {"_id": "$actor_id", "film_count": {"$sum": 1}}},  # Gruppiert nach Schauspieler-ID und zählt die Filme
-        {"$sort": {"film_count": -1}},                                # Sortiert absteigend nach Filmanzahl
-        {"$limit": 10}                                                # Beschränkt auf die Top 10 Schauspieler
+        {"$group": {"_id": "$actor_id", "film_count": {"$sum": 1}}},  # Groups by actor ID and counts the films
+        {"$sort": {"film_count": -1}},                                # Sorts in descending order by film count
+        {"$limit": 10}                                                # Limits to the top 10 actors
     ]
     result = list(mongo_db.film_actor.aggregate(pipeline))
     
-    print("Top 10 Schauspieler nach Filmanzahl:")
+    # Output
+    print("C: Top 10 actors by number of films:")
+    command = f"mongo_db.film_actor.aggregate({pipeline})"
+    print(f"Command: {command}")
     for actor in result:
-        actor_details = mongo_db.actor.find_one({"actor_id": actor["_id"]})  # Findet den Namen des Schauspielers
-        print(f"{actor_details['first_name'].ljust(10)} {actor_details['last_name'].ljust(10)}: {actor['film_count']} Filme")
+        actor_details = mongo_db.actor.find_one({"actor_id": actor["_id"]})  # Finds the actor's name
+        print(f"{actor_details['first_name'].ljust(10)} {actor_details['last_name'].ljust(10)}: {actor['film_count']} films")
+
+    print()
     return result
 
-# d. Die Erlöse je Mitarbeiter
+# d. Revenue per staff member
 def revenue_per_staff():
     """
-    Berechnet die Erlöse (Umsatz) pro Mitarbeiter und gibt diese in absteigender Reihenfolge zurück.
+    Calculates revenue (total amount) per staff member and returns it in descending order.
     
-    Rückgabe:
-        list: Eine Liste von Dokumenten mit Mitarbeiter-IDs und jeweiligen Umsätzen
+    Returns:
+        list: A list of documents with staff IDs and corresponding revenues.
     """
     pipeline = [
-        {"$group": {"_id": "$staff_id", "total_revenue": {"$sum": "$amount"}}},  # Gruppiert nach Mitarbeiter-ID und summiert die Beträge
-        {"$sort": {"total_revenue": -1}}                                         # Sortiert absteigend nach Umsatz
+        {"$group": {"_id": "$staff_id", "total_revenue": {"$sum": "$amount"}}},  # Groups by staff ID and sums the amounts
+        {"$sort": {"total_revenue": -1}}                                         # Sorts in descending order by revenue
     ]
     result = list(mongo_db.payment.aggregate(pipeline))
     
-    print("Erlöse je Mitarbeiter:")
+    # Output
+    print("D: Revenue per staff member:")
+    command = f"mongo_db.payment.aggregate({pipeline})"
+    print(f"Command: {command}")
     for staff in result:
         staff_details = mongo_db.staff.find_one({"staff_id": staff["_id"]})
-        print(f"Mitarbeiter {staff_details['first_name'].ljust(10)} {staff_details['last_name'].ljust(10)}: ${staff['total_revenue']:.2f}")
+        print(f"Staff {staff_details['first_name'].ljust(10)} {staff_details['last_name'].ljust(10)}: ${staff['total_revenue']:.2f}")
+    
+    print()
     return result
 
-# e. Die IDs der 10 Kunden mit den meisten Entleihungen
+# e. The IDs of the top 10 customers with the most rentals
 def top_customers_by_rentals():
     """
-    Findet die 10 Kunden mit den meisten Entleihungen und gibt ihre IDs sowie die Anzahl der Entleihungen zurück.
+    Finds the top 10 customers with the most rentals and returns their IDs along with the number of rentals.
     
-    Rückgabe:
-        list: Eine Liste von Dokumenten mit Kunden-IDs und jeweiliger Entleihungsanzahl
+    Returns:
+        list: A list of documents with customer IDs and rental counts.
     """
     pipeline = [
-        {"$group": {"_id": "$customer_id", "rental_count": {"$sum": 1}}},  # Gruppiert nach Kunden-ID und zählt die Entleihungen
-        {"$sort": {"rental_count": -1}},                                   # Sortiert absteigend nach Anzahl der Entleihungen
-        {"$limit": 10}                                                     # Beschränkt auf die Top 10 Kunden
+        {"$group": {"_id": "$customer_id", "rental_count": {"$sum": 1}}},  # Groups by customer ID and counts the rentals
+        {"$sort": {"rental_count": -1}},                                   # Sorts in descending order by rental count
+        {"$limit": 10}                                                     # Limits to the top 10 customers
     ]
     result = list(mongo_db.rental.aggregate(pipeline))
     
-    print("Top 10 Kunden nach Entleihungsanzahl:")
+    # Output
+    print("E: Top 10 customers by number of rentals:")
+    command = f"mongo_db.rental.aggregate({pipeline})"
+    print(f"Command: {command}")
     for customer in result:
         customer_details = mongo_db.customer.find_one({"customer_id": customer["_id"]})
-        print(f"Kunde {customer['_id']} {customer_details['first_name'].ljust(10)} {customer_details['last_name'].ljust(10)}: {customer['rental_count']} Entleihungen")
+        print(f"Customer {customer['_id']} {customer_details['first_name'].ljust(10)} {customer_details['last_name'].ljust(10)}: {customer['rental_count']} rentals")
+    
+    print()
     return result
 
-# f. Die 10 Kunden, die das meiste Geld ausgegeben haben
+# f. The top 10 customers who spent the most money
 def top_customers_by_spending():
     """
-    Findet die 10 Kunden, die am meisten ausgegeben haben und gibt ihre Namen und Ausgaben zurück.
+    Finds the top 10 customers who spent the most money and returns their names and total spending.
     
-    Rückgabe:
-        list: Eine Liste von Dokumenten mit Kunden-IDs und deren Gesamtausgaben
+    Returns:
+        list: A list of documents with customer IDs and their total spending.
     """
     pipeline = [
-        {"$group": {"_id": "$customer_id", "total_spent": {"$sum": "$amount"}}},  # Gruppiert nach Kunden-ID und summiert die Beträge
-        {"$sort": {"total_spent": -1}},                                           # Sortiert absteigend nach Ausgaben
-        {"$limit": 10}                                                            # Beschränkt auf die Top 10 Kunden
+        {"$group": {"_id": "$customer_id", "total_spent": {"$sum": "$amount"}}},  # Groups by customer ID and sums the amounts
+        {"$sort": {"total_spent": -1}},                                           # Sorts in descending order by total spending
+        {"$limit": 10}                                                            # Limits to the top 10 customers
     ]
     result = list(mongo_db.payment.aggregate(pipeline))
     
-    print("Top 10 Kunden nach Ausgaben:")
+    # Output
+    print("F: Top 10 customers by total spending:")
+    command = f"mongo_db.payment.aggregate({pipeline})"
+    print(f"Command: {command}")
     for customer in result:
         customer_details = mongo_db.customer.find_one({"customer_id": customer["_id"]})
         print(f"{customer_details['first_name'].ljust(10)} {customer_details['last_name'].ljust(10)}: ${customer['total_spent']:.2f}")
+
+    print()
     return result
 
-# g. Die 10 meistgesehenen Filme nach Titel, absteigend sortiert
+# g. The top 10 most-watched movies by title, sorted in descending order
 def most_watched_movies():
     """
-    Findet die 10 meistgesehenen Filme und gibt deren Titel sowie die Anzahl der Entleihungen zurück.
+    Finds the top 10 most-watched movies and returns their titles and number of rentals.
     
-    Rückgabe:
-        list: Eine Liste von Dokumenten mit Film-IDs und Anzahl der Entleihungen
+    Returns:
+        list: A list of documents with movie IDs and rental counts.
     """
     pipeline = [
-        # Schritt 1: Gruppiert nach Inventar-ID und zählt die Entleihungen
+        # Step 1: Group by inventory ID and count the rentals
         {"$group": {"_id": "$inventory_id", "rental_count": {"$sum": 1}}},
 
-        # Schritt 2: Verknüpft die `inventory`-Sammlung, um die `film_id` für jede `inventory_id` abzurufen
+        # Step 2: Lookup the `inventory` collection to get `film_id` for each `inventory_id`
         {"$lookup": {
             "from": "inventory",
             "localField": "_id",
             "foreignField": "inventory_id",
             "as": "inventory_details"
         }},
-        {"$unwind": "$inventory_details"},  # Entpackt die Daten der verknüpften Dokumente
+        {"$unwind": "$inventory_details"},  # Unwind the joined inventory data
 
-        # Schritt 3: Verknüpft die `film`-Sammlung, um Filmtitel anhand der `film_id` abzurufen
+        # Step 3: Lookup the `film` collection to get the film title based on `film_id`
         {"$lookup": {
             "from": "film",
             "localField": "inventory_details.film_id",
             "foreignField": "film_id",
             "as": "film_details"
         }},
-        {"$unwind": "$film_details"},  # Entpackt die Daten der verknüpften Filmtitel
+        {"$unwind": "$film_details"},  # Unwind the film details to access the title
         
-        # Schritt 4: Gruppiert nach `film_id` und `title` und summiert die Entleihungen für denselben Film
+        # Step 4: Group by `film_id` and `title` and sum the rentals for the same film
         {"$group": {"_id": {"film_id": "$inventory_details.film_id", "title": "$film_details.title"}, "total_rentals": {"$sum": "$rental_count"}}},
 
-        # Schritt 5: Sortiert nach Entleihungsanzahl und beschränkt auf die Top 10 Filme
+        # Step 5: Sort by rental count and limit to the top 10 films
         {"$sort": {"total_rentals": -1}},
         {"$limit": 10}
     ]
     result = list(mongo_db.rental.aggregate(pipeline))
     
-    print("Top 10 meistgesehenen Filme:")
+    # Output
+    print("G: Top 10 most-watched movies:")
+    command = f"mongo_db.rental.aggregate({pipeline})"
+    print(f"Command: {command}")
     for film in result:
         title = film["_id"]["title"]
         rentals = film["total_rentals"]
-        print(f"{title.ljust(25)}: {rentals} Entleihungen")
+        print(f"{title.ljust(25)}: {rentals} rentals")
+
+    print()
     return result
 
-# h. Die 3 meistgesehenen Filmkategorien
+# h. The top 3 most-watched movie categories
 def top_categories():
     """
-    Findet die 3 meistgesehenen Filmkategorien und gibt deren Namen sowie die Anzahl der Entleihungen zurück.
+    Finds the top 3 most-watched movie categories and returns their names and rental counts.
     
-    Rückgabe:
-        list: Eine Liste von Dokumenten mit Kategorienamen und deren Entleihungsanzahl
+    Returns:
+        list: A list of documents with category names and their rental counts.
     """
     pipeline = [
-        # Schritt 1: Gruppieren der Entleihungen nach `inventory_id` und Zählen der Entleihungen
-        {"$group": {"_id": "$inventory_id", "rental_count": {"$sum": 1}}},
-
-        # Schritt 2: Verknüpfung mit `inventory`, um die `film_id` für jede `inventory_id` zu erhalten
+        # Step 1: Join the `rental` collection with `inventory` to get `film_id` for each rental
         {"$lookup": {
             "from": "inventory",
-            "localField": "_id",
+            "localField": "inventory_id",
             "foreignField": "inventory_id",
             "as": "inventory_details"
         }},
-        {"$unwind": "$inventory_details"},  # Entpackt die Inventardetails
+        {"$unwind": "$inventory_details"},  # Unwind the inventory details
 
-        # Schritt 4: Verknüpfung mit `category`, um den Kategorienamen anhand der `film_id` zu erhalten
+        # Step 2: Join with `film` to find the film categories for each rental
+        {"$lookup": {
+            "from": "film",
+            "localField": "inventory_details.film_id",
+            "foreignField": "film_id",
+            "as": "film_details"
+        }},
+        {"$unwind": "$film_details"},  # Unwind the film details
+
+        # Step 3: Join with `film_category` to find the category for each film
+        {"$lookup": {
+            "from": "film_category",
+            "localField": "film_details.film_id",
+            "foreignField": "film_id",
+            "as": "film_category_details"
+        }},
+        {"$unwind": "$film_category_details"},  # Unwind the film category details
+        
         {"$lookup": {
             "from": "category",
-            "localField": "inventory_details.film_id",
+            "localField": "film_category_details.category_id",
             "foreignField": "category_id",
             "as": "category_details"
         }},
-        {"$unwind": "$category_details"},  # Entpackt die Kategorienamen
+        {"$unwind": "$category_details"},  # Unwind the category names
 
-        # Schritt 5: Gruppieren nach Kategorie und Summieren der Entleihungen pro Kategorie
-        {"$group": {"_id": "$category_details.name", "total_rentals": {"$sum": "$rental_count"}}},
+        # Step 4: Group by category and sum the rentals per category
+        {"$group": {"_id": "$category_details.name", "total_rentals": {"$sum": 1}}},
 
-        # Schritt 6: Sortieren nach Entleihungsanzahl und Begrenzung auf die Top 3 Kategorien
+        # Step 5: Sort by rental count and limit to the top 3 categories
         {"$sort": {"total_rentals": -1}},
         {"$limit": 3}
     ]
 
     result = list(mongo_db.rental.aggregate(pipeline))
 
-    print("Top 3 meistgesehenen Filmkategorien:")
+    # Output
+    print("H: Top 3 most-watched movie categories:")
+    command = f"mongo_db.rental.aggregate({pipeline})"
+    print(f"Command: {command}")
+
     for category in result:
-        print(f"Kategorie {category['_id'].ljust(10)}: {category['total_rentals']} Entleihungen")
+        print(f"Category {category['_id'].ljust(10)}: {category['total_rentals']} rentals")
+    
+    print()
     return result
 
-#i. Eine Sicht auf die Kunden mit allen relevanten Informationen wie im View customer_l
+# i. A view of customers with all relevant information as in the customer_list view
 def customer_view():
     """
-    Erstellt eine Sicht der Kunden mit allen relevanten Informationen, ähnlich dem View „customer_list“,
-    und gibt die Daten in tabellarischer Form mit einer Überschriftenzeile aus.
+    Creates a view of customers with all relevant information, similar to the view `customer_list`,
+    and outputs the data in tabular form with a header row.
     
-    Rückgabe:
-        list: Eine Liste von Dokumenten mit vollständigen Kundeninformationen.
+    Returns:
+        list: A list of documents with complete customer information.
     """
     pipeline = [
-        # Schritt 1: Verknüpfung mit der "address" Sammlung, um Adressdetails hinzuzufügen
+        # Step 1: Join with the "address" collection to add address details
         {"$lookup": {
             "from": "address",
             "localField": "address_id",
             "foreignField": "address_id",
             "as": "address_details"
         }},
-        {"$unwind": "$address_details"},  # Entpackt die Adressdetails in einzelne Dokumente
+        {"$unwind": "$address_details"},  # Unwind the address details into individual documents
         
-        # Schritt 2: Verknüpfung mit der "city" Sammlung, um Stadtdetails hinzuzufügen
+        # Step 2: Join with the "city" collection to add city details
         {"$lookup": {
             "from": "city",
             "localField": "address_details.city_id",
             "foreignField": "city_id",
             "as": "city_details"
         }},
-        {"$unwind": "$city_details"},  # Entpackt die Stadtdetails
+        {"$unwind": "$city_details"},  # Unwind the city details
         
-        # Schritt 3: Verknüpfung mit der "country" Sammlung, um Länderdetails hinzuzufügen
+        # Step 3: Join with the "country" collection to add country details
         {"$lookup": {
             "from": "country",
             "localField": "city_details.country_id",
             "foreignField": "country_id",
             "as": "country_details"
         }},
-        {"$unwind": "$country_details"},  # Entpackt die Länderdetails
+        {"$unwind": "$country_details"},  # Unwind the country details
         
-        # Schritt 4: Auswahl der relevanten Felder, um das endgültige Ergebnis zu formen
+        # Step 4: Select the relevant fields to shape the final result
         {"$project": {
-            "customer_id": "$customer_id",  # Kunden-ID aus der aktuellen Sammlung
-            "name": {"$concat": ["$first_name", " ", "$last_name"]},  # Vor- und Nachname kombiniert
-            "address": "$address_details.address",  # Adresse
-            "postal_code": "$address_details.postal_code",  # PLZ
-            "phone": "$address_details.phone",               # Telefonnummer
-            "city": "$city_details.city",    # Stadt
-            "country": "$country_details.country",  # Land
-            #"notes": "$activebool",               # Notizen
-            "active": "$active",             # Status des Kunden
+            "customer_id": "$customer_id",  # Customer ID from the current collection
+            "name": {"$concat": ["$first_name", " ", "$last_name"]},  # Combined first and last name
+            "address": "$address_details.address",  # Address
+            "postal_code": "$address_details.postal_code",  # Postal code
+            "phone": "$address_details.phone",               # Phone number
+            "city": "$city_details.city",    # City
+            "country": "$country_details.country",  # Country
+            "active": "$active",             # Customer status
         }}
     ]
 
     result = list(mongo_db.customer.aggregate(pipeline))
-    
-    # Tabelle erstellen und Überschriftenzeile definieren
+    print("I: A view of customer list:")
+    # Create a table and define header row
     table = PrettyTable()
-    table.field_names = ["Customer ID", "Name", "Address", "Postal Code", "Phone", "City", "Country", "SID"] # Nodes fehlt
-    
-    # Daten in die Tabelle einfügen
+    table.field_names = ["Customer ID", "Name", "Address", "Postal Code", "Phone", "City", "Country", "Active"]
+
+    # Insert data into the table
     for customer in result[:10]:
         table.add_row([
             customer["customer_id"],
@@ -273,36 +350,33 @@ def customer_view():
             customer["phone"],
             customer["city"],
             customer["country"],
-            # customer["nodes"],
             customer["active"]
         ])
     
-    # Tabelle ausgeben
+    # Output the table
     print(table)
     return result
 
+# Establish a connection to the NoSQL database
+mongo_db = MongoDBSingleton.get_instance()
 
-
-# Verbindung zur NoSQL-Datenbank herstellen
-client = MongoClient("mongodb://mongodb:27017/")
-mongo_db = client['dvdrental']
-
-print("A: ")
+print('version_1')
+# A:
 number_of_films = total_films()
-print("B: ")
+# B:
 number_of_films_per_location = films_per_location()
-print("C: ")
+# C:
 top_ten_actors = top_actors()
-print("D: ")
+# D:
 revenue_of_stuff = revenue_per_staff()
-print("E: ")
+# E: 
 top_customer_rentals = top_customers_by_rentals()
-print("F: ")
+# F:
 top_ten_customer_spending = top_customers_by_spending()
-print("G: ")
+# G:
 top_ten_movies = most_watched_movies()
-print("H: ")
+# H:
 top_three_categories = top_categories()
-print("I: ")
+# I:
 top_ten_cusomer_view = customer_view()
 
