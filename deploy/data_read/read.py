@@ -145,25 +145,43 @@ def top_customers_by_rentals():
 # f. The top 10 customers who spent the most money
 def top_customers_by_spending():
     """
-    Finds the top 10 customers who spent the most money and returns their names and total spending.
+    Finds the top 10 customers who spent the most money and returns their names, total spending, and store ID.
     
     Returns:
-        list: A list of documents with customer IDs and their total spending.
+        list: A list of documents with customer names, total spending, and store IDs.
     """
     pipeline = [
         {"$group": {"_id": "$customer_id", "total_spent": {"$sum": "$amount"}}},  # Groups by customer ID and sums the amounts
         {"$sort": {"total_spent": -1}},                                           # Sorts in descending order by total spending
-        {"$limit": 10}                                                            # Limits to the top 10 customers
+        {"$limit": 10},                                                           # Limits to the top 10 customers
+        {
+            "$lookup": {                                                          # Joins with the customer collection
+                "from": "customer",
+                "localField": "_id",
+                "foreignField": "customer_id",
+                "as": "customer_info"
+            }
+        },
+        {"$unwind": "$customer_info"},                                            # Unwinds the joined customer information
+        {
+            "$project": {                                                         # Projects relevant fields
+                "customer_id": "$_id",
+                "total_spent": 1,
+                "first_name": "$customer_info.first_name",
+                "last_name": "$customer_info.last_name",
+                "store_id": "$customer_info.store_id"                             # Includes store ID
+            }
+        }
     ]
+    
     result = list(mongo_db.payment.aggregate(pipeline))
     
     # Output
-    print("F: Top 10 customers by total spending:")
+    print("Top 10 customers by total spending:")
     command = f"mongo_db.payment.aggregate({pipeline})"
     print(f"Command: {command}")
     for customer in result:
-        customer_details = mongo_db.customer.find_one({"customer_id": customer["_id"]})
-        print(f"{customer_details['first_name'].ljust(10)} {customer_details['last_name'].ljust(10)}: ${customer['total_spent']:.2f}")
+        print(f"{customer['first_name'].ljust(10)} {customer['last_name'].ljust(10)} | Store ID: {customer['store_id']} | Total Spent: ${customer['total_spent']:.2f}")
 
     print()
     return result
@@ -293,6 +311,7 @@ def customer_view():
     Returns:
         list: A list of documents with complete customer information.
     """
+    # This pipeline is not used because the direct  
     pipeline = [
         # Step 1: Join with the "address" collection to add address details
         {"$lookup": {
@@ -334,23 +353,31 @@ def customer_view():
         }}
     ]
 
-    result = list(mongo_db.customer.aggregate(pipeline))
+    # result = list(mongo_db.customer.aggregate(pipeline))
+
+    # Access the MongoDB view "customer_list"
+    customer_view = mongo_db.customer_list  # Replace 'db' with the actual MongoDB database name
+
+    # Execute query, optionally with a limit
+    result = customer_view.find().limit(15)  # Limit to 15 documents for a preview
+
     print("I: A view of customer list:")
     # Create a table and define header row
     table = PrettyTable()
-    table.field_names = ["Customer ID", "Name", "Address", "Postal Code", "Phone", "City", "Country", "Active"]
+    table.field_names = ["Customer ID", "Name", "Address", "Postal Code", "Phone", "City", "Country", "Active", "SID"]
 
     # Insert data into the table
-    for customer in result[:10]:
+    for customer in result[1:11]:
         table.add_row([
-            customer["customer_id"],
+            customer["id"],
             customer["name"],
             customer["address"],
-            customer["postal_code"],
+            customer["zip code"],
             customer["phone"],
             customer["city"],
             customer["country"],
-            customer["active"]
+            customer["notes"],
+            customer["sid"]
         ])
     
     # Output the table
@@ -360,7 +387,10 @@ def customer_view():
 # Establish a connection to the NoSQL database
 mongo_db = MongoDBSingleton.get_instance()
 
-print('version_1')
+print()
+print("-" * 10 + " READ " + "-" * 10)
+print()
+
 # A:
 number_of_films = total_films()
 # B:
