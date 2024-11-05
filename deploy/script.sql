@@ -30,14 +30,12 @@ GROUP BY customer_id
 ORDER BY rental_count DESC
 LIMIT 10;
 
--- f. Die Vor- und Nachnamen sowie die Niederlassung der 10 Kunden, die das meiste Geld ausgegeben haben
-SELECT customer.first_name, customer.last_name, store.store_id, SUM(payment.amount) AS total_spent
-FROM payment
-JOIN customer ON payment.customer_id = customer.customer_id
-JOIN rental ON rental.customer_id = customer.customer_id
-JOIN inventory ON rental.inventory_id = inventory.inventory_id
-JOIN store ON inventory.store_id = store.store_id
-GROUP BY customer.customer_id, store.store_id
+--f.
+SELECT c.first_name, c.last_name, s.store_id, SUM(p.amount) AS total_spent
+FROM customer c
+JOIN payment p ON c.customer_id = p.customer_id
+JOIN store s ON c.store_id = s.store_id
+GROUP BY c.customer_id, c.first_name, c.last_name, s.store_id
 ORDER BY total_spent DESC
 LIMIT 10;
 
@@ -47,8 +45,7 @@ FROM film
 JOIN inventory ON film.film_id = inventory.film_id
 JOIN rental ON inventory.inventory_id = rental.inventory_id
 GROUP BY film.film_id
-ORDER BY view_count DESC
-LIMIT 10;
+ORDER BY view_count DESC;
 
 -- h. Die 3 meistgesehenen Filmkategorien
 SELECT category.name AS category, COUNT(rental.rental_id) AS view_count
