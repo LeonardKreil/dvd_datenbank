@@ -91,6 +91,10 @@ def verify_new_store_and_inventory():
 # Establish a connection to the NoSQL database
 mongo_db = MongoDBSingleton.get_instance()
 
+print()
+print("-" * 10 + " UPDATE " + "-" * 10)
+print()
+
 # Funktionen aufrufen
 verify_staff_passwords()
 update_staff_passwords()
