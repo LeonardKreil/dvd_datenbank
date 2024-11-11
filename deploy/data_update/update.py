@@ -4,89 +4,108 @@ import hashlib
 import sys
 import os
 
-# Get the parent directory and append it to sys.path
+# Retrieve the parent directory and add it to sys.path to enable `db_connection` import
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from db_connection import MongoDBSingleton  
 
 def generate_secure_password(length=12):
     """
-    Generiert ein zufälliges, sicheres Passwort.
+    Generates a random, secure password of the specified length.
+    Uses uppercase, lowercase letters, digits, and special characters.
     """
     characters = string.ascii_letters + string.digits + string.punctuation
     return ''.join(random.choice(characters) for _ in range(length))
 
 def update_staff_passwords():
     """
-    Vergibt allen Mitarbeitern ein neues, sicheres Passwort und aktualisiert die `staff`-Sammlung.
+    This function generates a new, secure password for each staff member
+    and updates their entries in the `staff` database.
     """
-    staff_members = mongo_db.staff.find()
+    staff_members = mongo_db.staff.find()  # Retrieve all staff members from the DB
     
     for staff in staff_members:
+        # Generate a new secure password
         new_password = generate_secure_password()
         
-        # Optional: Passwort verschlüsseln, z. B. mit SHA-256
+        # Optional: Encrypt the password using SHA-256 for secure storage
         hashed_password = hashlib.sha256(new_password.encode()).hexdigest()
         
-        # Passwort in der Datenbank aktualisieren
+        # Update the password in the database
         mongo_db.staff.update_one(
             {"staff_id": staff["staff_id"]},
             {"$set": {"password": hashed_password}}
         )
-        print(f"Passwort für Mitarbeiter {staff['first_name']} {staff['last_name']} wurde auf {hashed_password} aktualisiert.")
+        
+        # Print confirmation that the password has been updated
+        print(f"Password for staff member {staff['first_name']} {staff['last_name']} has been updated to {hashed_password}.")
 
 def add_new_store_with_inventory_transfer():
     """
-    Fügt einen neuen Standort hinzu und verlegt das Inventar der bisherigen Standorte dorthin.
+    Adds a new location to the database and updates all inventory entries 
+    to reference this new location.
     """
-    # 1. Erstellen des neuen Standorts
+    # 1. Create a new location with address and basic information
     new_store = {
-        "store_id": mongo_db.store.count_documents({}) + 1,  # Neuer store_id basierend auf aktueller Anzahl
+        "store_id": mongo_db.store.count_documents({}) + 1,  # Create a new store_id based on current count
         "address": "123 New Location Street",
         "city": "Fictional City",
         "country": "Fictionland",
         "phone": "123-456-7890"
     }
+    
+    # Save the new location to the database
     mongo_db.store.insert_one(new_store)
     new_store_id = new_store["store_id"]
 
-    # 2. Aktualisieren des Inventars, um auf den neuen Standort zu verweisen
+    # 2. Update inventory to reference the new location for all items
     mongo_db.inventory.update_many(
-        {},  # Aktualisiert alle Dokumente
+        {},  # Update all inventory entries
         {"$set": {"store_id": new_store_id}}
     )
-    print(f"Neuer Standort {new_store_id} erstellt und Inventar verlegt.")
+    
+    # Confirm that the new location was created and inventory transferred
+    print(f"New location {new_store_id} created and inventory transferred.")
 
 def verify_staff_passwords():
     """
-    Überprüft die aktualisierten Passwörter der Mitarbeiter.
+    This function verifies if staff members' passwords have been updated.
     """
     staff_members = mongo_db.staff.find()
+    
     for staff in staff_members:
         if 'password' in staff:
-            # Optional: Um zu überprüfen, dass die Passwortaktualisierung erfolgreich war,
-            # könnte man hier auch versuchen, das Passwort zu entschlüsseln.
-            print(f"Überprüfen des Passworts für Mitarbeiter {staff['first_name']} {staff['last_name']}: {staff['password']}")
+            # Optional: To verify successful password storage,
+            # decryption or further validation could be implemented here if needed
+            print(f"Verifying password for staff member {staff['first_name']} {staff['last_name']}: {staff['password']}")
         else:
-            print(f"Keine Passwortdaten für Mitarbeiter {staff['first_name']} {staff['last_name']} gefunden.")
+            # Output if no password is found for the staff member
+            print(f"No password data found for staff member {staff['first_name']} {staff['last_name']}.")
 
 def verify_new_store_and_inventory():
     """
-    Überprüft, ob der neue Standort erstellt wurde und das Inventar korrekt aktualisiert wurde.
+    Verifies if the new location was successfully created and if inventory 
+    entries have been correctly updated to reference the new location.
     """
+    # Search for the new location in the database using its address
     new_store = mongo_db.store.find_one({"address": "123 New Location Street"})
+    
     if new_store:
-        print(f"Neuer Standort erfolgreich erstellt: {new_store['store_id']} - {new_store['address']}")
+        # Confirm that the new location was successfully created
+        print(f"New location successfully created: {new_store['store_id']} - {new_store['address']}")
         
-        # Überprüfen, ob das Inventar auf den neuen Standort verweist
+        # Check if inventory references the new location
         inventory_items = mongo_db.inventory.find({"store_id": new_store['store_id']})
         item_count = mongo_db.inventory.count_documents({"store_id": new_store['store_id']})
         
         if item_count > 0:
-            print(f"Inventar erfolgreich auf den neuen Standort {new_store['store_id']} verlegt. Anzahl der Artikel: {item_count}")
+            # Confirm that the inventory was successfully transferred
+            print(f"Inventory successfully transferred to new location {new_store['store_id']}. Number of items: {item_count}")
         else:
-            print(f"Keine Artikel im Inventar für den neuen Standort {new_store['store_id']} gefunden.")
+            # Warning if no items are found for the new location
+            print(f"No items found in inventory for the new location {new_store['store_id']}.")
     else:
-        print("Neuer Standort nicht gefunden.")
+        # Output if the new location was not found
+        print("New location not found.")
 
 # Establish a connection to the NoSQL database
 mongo_db = MongoDBSingleton.get_instance()
@@ -95,11 +114,12 @@ print()
 print("-" * 10 + " UPDATE " + "-" * 10)
 print()
 
-# Funktionen aufrufen
-verify_staff_passwords()
-update_staff_passwords()
-verify_staff_passwords()
+# Call functions to perform operations and validations
+print('A: Assign a new secure password to all staff members')
+verify_staff_passwords()  # Pre-check of existing passwords
+update_staff_passwords()  # Update staff members' passwords
+verify_staff_passwords()  # Post-check of updated passwords
 
-add_new_store_with_inventory_transfer()
-verify_new_store_and_inventory()
-
+print('B: Create new location and transfer inventory')
+add_new_store_with_inventory_transfer()  # Add new location and transfer inventory
+verify_new_store_and_inventory()  # Verify location and inventory update
