@@ -29,6 +29,7 @@ def delete_short_films_and_rentals():
 
     # Find short films (duration < 60 minutes)
     short_films = list(mongo_db.film.find({"length": {"$lt": 60}}))
+    print('Command: list(mongo_db.film.find({"length": {"$lt": 60}})) #Find short films (duration < 60 minutes)')
     
     if not short_films:
         print("No short films to delete.")
@@ -45,6 +46,9 @@ def delete_short_films_and_rentals():
     if inventory_ids_to_delete:
         try:
             mongo_db.rental.delete_many({"inventory_id": {"$in": inventory_ids_to_delete}})
+            print('Command: inventory_docs = mongo_db.inventory.find({"film_id": {"$in": film_ids_to_delete}})')
+            print('Command: inventory_ids_to_delete = [doc["inventory_id"] for doc in inventory_docs if "inventory_id" in doc]')
+            print('Command: mongo_db.rental.delete_many({"inventory_id": {"$in": inventory_ids_to_delete}})')
             print(f"Deleted {len(inventory_ids_to_delete)} inventory_ids in rentals associated with short films.")
         except Exception as e:
             print(f"An error occurred during deletion of rentals: {e}")
@@ -54,6 +58,8 @@ def delete_short_films_and_rentals():
         try:
             # Finally, delete the short films themselves
             mongo_db.film.delete_many({"film_id": {"$in": film_ids_to_delete}})
+            print('Command: film_ids_to_delete = [film["film_id"] for film in short_films if "film_id" in film]')
+            print('Command: mongo_db.film.delete_many({"film_id": {"$in": film_ids_to_delete}})')
             print(f"Deleted {len(film_ids_to_delete)} short films.")
         except Exception as e:
             print(f"An error occurred during deletion of films: {e}")

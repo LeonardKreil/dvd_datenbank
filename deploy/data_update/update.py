@@ -22,6 +22,8 @@ def update_staff_passwords():
     and updates their entries in the `staff` database.
     """
     staff_members = mongo_db.staff.find()  # Retrieve all staff members from the DB
+
+    print('Command: mongo_db.staff.update_one({"staff_id": staff["staff_id"]},{"$set": {"password": hashed_password}})')
     
     for staff in staff_members:
         # Generate a new secure password
@@ -62,6 +64,9 @@ def add_new_store_with_inventory_transfer():
         {},  # Update all inventory entries
         {"$set": {"store_id": new_store_id}}
     )
+
+    print(f'Command: mongo_db.store.insert_one({new_store})')
+    print('Command: mongo_db.inventory.update_many({},{"$set": {"store_id": new_store_id}})')
     
     # Confirm that the new location was created and inventory transferred
     print(f"New location {new_store_id} created and inventory transferred.")
@@ -117,9 +122,14 @@ print()
 # Call functions to perform operations and validations
 print('A: Assign a new secure password to all staff members')
 verify_staff_passwords()  # Pre-check of existing passwords
+print()
 update_staff_passwords()  # Update staff members' passwords
+print()
 verify_staff_passwords()  # Post-check of updated passwords
+
+print()
 
 print('B: Create new location and transfer inventory')
 add_new_store_with_inventory_transfer()  # Add new location and transfer inventory
+print()
 verify_new_store_and_inventory()  # Verify location and inventory update
