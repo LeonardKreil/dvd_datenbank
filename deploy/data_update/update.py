@@ -23,7 +23,9 @@ def update_staff_passwords():
     """
     staff_members = mongo_db.staff.find()  # Retrieve all staff members from the DB
 
+    print()
     print('Command: mongo_db.staff.update_one({"staff_id": staff["staff_id"]},{"$set": {"password": hashed_password}})')
+    print()
     
     for staff in staff_members:
         # Generate a new secure password
@@ -67,6 +69,7 @@ def add_new_store_with_inventory_transfer():
 
     print(f'Command: mongo_db.store.insert_one({new_store})')
     print('Command: mongo_db.inventory.update_many({},{"$set": {"store_id": new_store_id}})')
+    print()
     
     # Confirm that the new location was created and inventory transferred
     print(f"New location {new_store_id} created and inventory transferred.")

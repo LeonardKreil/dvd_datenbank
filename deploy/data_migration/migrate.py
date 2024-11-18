@@ -43,10 +43,19 @@ def handle_nat_values(data_frame):
     Returns:
         pd.DataFrame: The DataFrame with NaT values replaced by the standard date.
     '''
-    standard_date = pd.Timestamp('2005-05-24 00:00:00')
-    for column in data_frame.select_dtypes(include=['datetime']):
-        # Replace all NaT values in datetime columns with the default value
+    # standard_date = pd.Timestamp('2005-05-24 00:00:00')
+    # for column in data_frame.select_dtypes(include=['datetime']):
+    #     # Replace all NaT values in datetime columns with the default value
+    #     data_frame[column] = data_frame[column].fillna(standard_date)
+    # return data_frame
+    standard_date = pd.Timestamp('2005-05-24 00:00:00')  # Definieren Sie ein Standarddatum
+    
+    for column in data_frame.select_dtypes(include=['datetime64[ns]']):
+        # NaT-Werte durch Standarddatum ersetzen
         data_frame[column] = data_frame[column].fillna(standard_date)
+        
+        # Zeitzoneninformationen entfernen, falls vorhanden
+        data_frame[column] = data_frame[column].dt.tz_localize(None)
     return data_frame
 
 def convert_dates(data_frame):
@@ -136,9 +145,12 @@ def migrate_tables(tables):
         # Retrieve data from the PostgreSQL table
         sql_query = text(f"SELECT * FROM {table_name};")  # text() to execute SQL
         data_frame = pd.read_sql(sql_query, engine)
-        data_frame = handle_memoryview(data_frame)  # Convert memoryview objects
-        data_frame = handle_nat_values(data_frame)  # Overwrite NaT values with the specified date
-        data_frame = convert_dates(data_frame=data_frame)
+        if table_name == 'customer':
+            data_frame = convert_dates(data_frame=data_frame)
+        elif table_name == 'rental':
+            data_frame = handle_nat_values(data_frame) # Overwrite NaT values with the specified date
+        elif table_name == 'staff':
+            data_frame = handle_memoryview(data_frame) # Convert memoryview objects
 
         if not data_frame.empty:  # Ensure the table is not empty
             # Insert data into MongoDB collection (collection = table name)

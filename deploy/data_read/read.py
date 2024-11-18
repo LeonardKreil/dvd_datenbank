@@ -19,9 +19,11 @@ def total_films():
     count = mongo_db.film.count_documents({})
 
     # Output
-    print("A: ")
+    print("A: Total number of available films:")
     command = "mongo_db.film.count_documents({})"
+    print()
     print(f"Command: {command}")
+    print()
     print(f"Total number of available films: {count}")
     print()
     return count
@@ -53,15 +55,25 @@ def films_per_location():
 
     result = list(mongo_db.inventory.aggregate(pipeline))
 
-    # Output
-    print("B: ")
+    print("B: Number of unique films per location:")
+    print()
     command = f"mongo_db.inventory.aggregate({pipeline})"
     print(f"Command: {command}")
-    print("Number of unique films per location:")
-    for entry in result:
-        print(f"Store {entry['_id']}: {entry['films_per_store']} films")
     print()
-    
+
+    # Initialize PrettyTable for the output
+    table = PrettyTable()
+    table.field_names = ["Store ID", "Films per Store"]  # Define the table headers
+
+    # Process and add store details to the table
+    for entry in result:
+        # Add row to the table with store ID and the number of unique films
+        table.add_row([entry["_id"], entry["films_per_store"]])
+
+    # Print the formatted table
+    print(table)
+    print()
+
     return result
 
 # c. The top 10 actors with the most films, sorted in descending order
@@ -79,16 +91,32 @@ def top_actors():
         {"$limit": 10}                                                # Limits to the top 10 actors
     ]
     result = list(mongo_db.film_actor.aggregate(pipeline))
-    
-    # Output
+
     print("C: Top 10 actors by number of films:")
+    print()
     command = f"mongo_db.film_actor.aggregate({pipeline})"
     print(f"Command: {command}")
-    for actor in result:
-        actor_details = mongo_db.actor.find_one({"actor_id": actor["_id"]})  # Finds the actor's name
-        print(f"{actor_details['first_name'].ljust(10)} {actor_details['last_name'].ljust(10)}: {actor['film_count']} films")
-
     print()
+    
+    # Initialize PrettyTable for the output
+    table = PrettyTable()
+    table.field_names = ["First Name", "Last Name", "Film Count"]  # Define the table headers
+
+    # Process and add actor details to the table
+    for actor in result:
+        # Fetch actor details from the database
+        actor_details = mongo_db.actor.find_one({"actor_id": actor["_id"]})
+        # Add row to the table with extracted data
+        table.add_row([
+            actor_details['first_name'], 
+            actor_details['last_name'], 
+            actor['film_count']
+        ])
+
+    # Print the formatted table
+    print(table)
+    print()
+
     return result
 
 # d. Revenue per staff member
@@ -104,16 +132,33 @@ def revenue_per_staff():
         {"$sort": {"total_revenue": -1}}                                         # Sorts in descending order by revenue
     ]
     result = list(mongo_db.payment.aggregate(pipeline))
-    
+
     # Output
     print("D: Revenue per staff member:")
+    print()
     command = f"mongo_db.payment.aggregate({pipeline})"
     print(f"Command: {command}")
-    for staff in result:
-        staff_details = mongo_db.staff.find_one({"staff_id": staff["_id"]})
-        print(f"Staff {staff_details['first_name'].ljust(10)} {staff_details['last_name'].ljust(10)}: ${staff['total_revenue']:.2f}")
-    
     print()
+    
+    # Initialize PrettyTable for the output
+    table = PrettyTable()
+    table.field_names = ["First Name", "Last Name", "Total Revenue"]  # Define the table headers
+
+    # Process and add staff details to the table
+    for staff in result:
+        # Fetch staff details from the database
+        staff_details = mongo_db.staff.find_one({"staff_id": staff["_id"]})
+        # Add row to the table with extracted and formatted data
+        table.add_row([
+            staff_details['first_name'], 
+            staff_details['last_name'], 
+            f"${staff['total_revenue']:.2f}"
+        ])
+
+    # Print the formatted table
+    print(table)
+    print()
+
     return result
 
 # e. The IDs of the top 10 customers with the most rentals
@@ -133,11 +178,28 @@ def top_customers_by_rentals():
     
     # Output
     print("E: Top 10 customers by number of rentals:")
+    print()
     command = f"mongo_db.rental.aggregate({pipeline})"
     print(f"Command: {command}")
+    print()
+
+    # Create a PrettyTable instance
+    table = PrettyTable()
+
+    # Define the column headers
+    table.field_names = ["Customer ID", "First Name", "Last Name", "Rental Count"]
     for customer in result:
         customer_details = mongo_db.customer.find_one({"customer_id": customer["_id"]})
-        print(f"Customer {customer['_id']} {customer_details['first_name'].ljust(10)} {customer_details['last_name'].ljust(10)}: {customer['rental_count']} rentals")
+        # Extract data
+        customer_id = customer["_id"]
+        first_name = customer_details["first_name"]
+        last_name = customer_details["last_name"]
+        rental_count = customer["rental_count"]
+        # Add the row to the table
+        table.add_row([customer_id, first_name, last_name, rental_count])
+
+    # Display the formatted table
+    print(table)
     
     print()
     return result
@@ -177,12 +239,30 @@ def top_customers_by_spending():
     result = list(mongo_db.payment.aggregate(pipeline))
     
     # Output
-    print("Top 10 customers by total spending:")
+    print("F: Top 10 customers by total spending:")
+    print()
     command = f"mongo_db.payment.aggregate({pipeline})"
     print(f"Command: {command}")
-    for customer in result:
-        print(f"{customer['first_name'].ljust(10)} {customer['last_name'].ljust(10)} | Store ID: {customer['store_id']} | Total Spent: ${customer['total_spent']:.2f}")
+    print()
 
+    # Create a PrettyTable instance
+    table = PrettyTable()
+
+    # Define the column headers
+    table.field_names = ["First Name", "Last Name", "Store ID", "Total Spent"]
+
+    # Populate the table with rows
+    for customer in result:
+        # Extract customer data
+        first_name = customer["first_name"]
+        last_name = customer["last_name"]
+        store_id = customer["store_id"]
+        total_spent = f"${customer['total_spent']:.2f}"  # Format as currency
+        # Add the row to the table
+        table.add_row([first_name, last_name, store_id, total_spent])
+
+    # Display the formatted table
+    print(table)
     print()
     return result
 
@@ -227,13 +307,27 @@ def most_watched_movies():
     
     # Output
     print("G: Top 10 most-watched movies:")
+    print()
     command = f"mongo_db.rental.aggregate({pipeline})"
     print(f"Command: {command}")
+    print()
+
+    # Create a PrettyTable instance
+    table = PrettyTable()
+
+    # Define the column headers
+    table.field_names = ["Film Title", "Total Rentals"]
+
+    # Populate the table with rows
     for film in result:
+        # Extract the title and rental data
         title = film["_id"]["title"]
         rentals = film["total_rentals"]
-        print(f"{title.ljust(25)}: {rentals} rentals")
+        # Add the row to the table
+        table.add_row([title, rentals])
 
+    # Display the formatted table
+    print(table)
     print()
     return result
 
@@ -294,10 +388,20 @@ def top_categories():
     # Output
     print("H: Top 3 most-watched movie categories:")
     command = f"mongo_db.rental.aggregate({pipeline})"
+    print()
     print(f"Command: {command}")
+    print()
 
+    # Create a table and define header row
+    table = PrettyTable()
+    table.field_names = ["Category", "Total Rentals"]
+
+    # Insert data into the table
     for category in result:
-        print(f"Category {category['_id'].ljust(10)}: {category['total_rentals']} rentals")
+        table.add_row([category["_id"], category["total_rentals"]])
+
+    # Output the table
+    print(table)
     
     print()
     return result
@@ -311,57 +415,19 @@ def customer_view():
     Returns:
         list: A list of documents with complete customer information.
     """
-    # This pipeline is not used because the direct  
-    pipeline = [
-        # Step 1: Join with the "address" collection to add address details
-        {"$lookup": {
-            "from": "address",
-            "localField": "address_id",
-            "foreignField": "address_id",
-            "as": "address_details"
-        }},
-        {"$unwind": "$address_details"},  # Unwind the address details into individual documents
-        
-        # Step 2: Join with the "city" collection to add city details
-        {"$lookup": {
-            "from": "city",
-            "localField": "address_details.city_id",
-            "foreignField": "city_id",
-            "as": "city_details"
-        }},
-        {"$unwind": "$city_details"},  # Unwind the city details
-        
-        # Step 3: Join with the "country" collection to add country details
-        {"$lookup": {
-            "from": "country",
-            "localField": "city_details.country_id",
-            "foreignField": "country_id",
-            "as": "country_details"
-        }},
-        {"$unwind": "$country_details"},  # Unwind the country details
-        
-        # Step 4: Select the relevant fields to shape the final result
-        {"$project": {
-            "customer_id": "$customer_id",  # Customer ID from the current collection
-            "name": {"$concat": ["$first_name", " ", "$last_name"]},  # Combined first and last name
-            "address": "$address_details.address",  # Address
-            "postal_code": "$address_details.postal_code",  # Postal code
-            "phone": "$address_details.phone",               # Phone number
-            "city": "$city_details.city",    # City
-            "country": "$country_details.country",  # Country
-            "active": "$active",             # Customer status
-        }}
-    ]
-
-    # result = list(mongo_db.customer.aggregate(pipeline))
 
     # Access the MongoDB view "customer_list"
-    customer_view = mongo_db.customer_list  # Replace 'db' with the actual MongoDB database name
+    customer_view = mongo_db.customer_list 
 
     # Execute query, optionally with a limit
     result = customer_view.find().limit(15)  # Limit to 15 documents for a preview
 
+    # Output
     print("I: A view of customer list:")
+    print()
+    command = f"mongo_db.customer_list.find().limit(15)"
+    print(f"Command: {command}")
+    print()
     # Create a table and define header row
     table = PrettyTable()
     table.field_names = ["Customer ID", "Name", "Address", "Postal Code", "Phone", "City", "Country", "Active", "SID"]
