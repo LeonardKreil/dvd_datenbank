@@ -17,14 +17,19 @@ def total_films():
     """
 
     count = mongo_db.film.count_documents({})
+    total_item_count = mongo_db.inventory.count_documents({})
+
 
     # Output
     print("A: Total number of available films:")
     command = "mongo_db.film.count_documents({})"
+    command_inventory = "mongo_db.inventory.count_documents({})"
     print()
     print(f"Command: {command}")
+    print(f"Command: {command_inventory}")
     print()
     print(f"Total number of available films: {count}")
+    print(f"Total number of available inventory: {total_item_count}")
     print()
     return count
 
