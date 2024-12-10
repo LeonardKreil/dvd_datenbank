@@ -1,0 +1,232 @@
+data_processing  | Connected to PostgreSQL
+data_processing  | Executed query: SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';
+data_processing  | Raw tables result: [('actor',), ('actor_info',), ('customer_list',), ('film_list',), ('nicer_but_slower_film_list',), ('sales_by_film_category',), ('store',), ('sales_by_store',), ('staff_list',), ('address',), ('category',), ('city',), ('country',), ('customer',), ('film_actor',), ('film_category',), ('inventory',), ('language',), ('rental',), ('staff',), ('payment',), ('film',)]
+data_processing  | Found 22 tables.
+data_processing  | ---------- MIGRATE ----------
+data_processing  |
+data_processing  | Migrating table: actor
+data_processing  | Inserted 200 records into MongoDB collection: actor with command: mongo_db[actor].insert_many(data_frame.to_dict('records'))
+data_processing  | Migrating table: actor_info
+data_processing  | Inserted 200 records into MongoDB collection: actor_info with command: mongo_db[actor_info].insert_many(data_frame.to_dict('records'))
+data_processing  | Migrating table: customer_list
+data_processing  | Inserted 599 records into MongoDB collection: customer_list with command: mongo_db[customer_list].insert_many(data_frame.to_dict('records'))
+data_processing  | Migrating table: film_list
+data_processing  | Inserted 997 records into MongoDB collection: film_list with command: mongo_db[film_list].insert_many(data_frame.to_dict('records'))
+data_processing  | Migrating table: nicer_but_slower_film_list
+data_processing  | Inserted 997 records into MongoDB collection: nicer_but_slower_film_list with command: mongo_db[nicer_but_slower_film_list].insert_many(data_frame.to_dict('records'))
+data_processing  | Migrating table: sales_by_film_category
+data_processing  | Inserted 16 records into MongoDB collection: sales_by_film_category with command: mongo_db[sales_by_film_category].insert_many(data_frame.to_dict('records'))
+data_processing  | Migrating table: store
+data_processing  | Inserted 2 records into MongoDB collection: store with command: mongo_db[store].insert_many(data_frame.to_dict('records'))
+data_processing  | Migrating table: sales_by_store
+data_processing  | Inserted 2 records into MongoDB collection: sales_by_store with command: mongo_db[sales_by_store].insert_many(data_frame.to_dict('records'))
+data_processing  | Migrating table: staff_list
+data_processing  | Inserted 2 records into MongoDB collection: staff_list with command: mongo_db[staff_list].insert_many(data_frame.to_dict('records'))
+data_processing  | Migrating table: address
+data_processing  | Inserted 603 records into MongoDB collection: address with command: mongo_db[address].insert_many(data_frame.to_dict('records'))
+data_processing  | Migrating table: category
+data_processing  | Inserted 16 records into MongoDB collection: category with command: mongo_db[category].insert_many(data_frame.to_dict('records'))
+data_processing  | Migrating table: city
+data_processing  | Inserted 600 records into MongoDB collection: city with command: mongo_db[city].insert_many(data_frame.to_dict('records'))
+data_processing  | Migrating table: country
+data_processing  | Inserted 109 records into MongoDB collection: country with command: mongo_db[country].insert_many(data_frame.to_dict('records'))
+data_processing  | Migrating table: customer
+data_processing  | Inserted 599 records into MongoDB collection: customer with command: mongo_db[customer].insert_many(data_frame.to_dict('records'))
+data_processing  | Migrating table: film_actor
+data_processing  | Inserted 5462 records into MongoDB collection: film_actor with command: mongo_db[film_actor].insert_many(data_frame.to_dict('records'))
+data_processing  | Migrating table: film_category
+data_processing  | Inserted 1000 records into MongoDB collection: film_category with command: mongo_db[film_category].insert_many(data_frame.to_dict('records'))
+data_processing  | Migrating table: inventory
+data_processing  | Inserted 4581 records into MongoDB collection: inventory with command: mongo_db[inventory].insert_many(data_frame.to_dict('records'))
+data_processing  | Migrating table: language
+data_processing  | Inserted 6 records into MongoDB collection: language with command: mongo_db[language].insert_many(data_frame.to_dict('records'))
+data_processing  | Migrating table: rental
+data_processing  | Inserted 16044 records into MongoDB collection: rental with command: mongo_db[rental].insert_many(data_frame.to_dict('records'))
+data_processing  | Migrating table: staff
+data_processing  | Inserted 2 records into MongoDB collection: staff with command: mongo_db[staff].insert_many(data_frame.to_dict('records'))
+data_processing  | Migrating table: payment
+data_processing  | Inserted 14596 records into MongoDB collection: payment with command: mongo_db[payment].insert_many(data_frame.to_dict('records'))
+data_processing  | Migrating table: film
+data_processing  | Inserted 1000 records into MongoDB collection: film with command: mongo_db[film].insert_many(data_frame.to_dict('records'))
+data_processing  |
+data_processing  | ---------- READ ----------
+data_processing  |
+data_processing  | A: Total number of available films:
+data_processing  |
+data_processing  | Command: mongo_db.film.count_documents({})
+data_processing  | Command: mongo_db.inventory.count_documents({})
+data_processing  |
+data_processing  | Total number of available films: 1000
+data_processing  | Total number of available inventory: 4581
+data_processing  |
+data_processing  | B: Number of unique films per location:
+data_processing  |
+data_processing  | Command: mongo_db.inventory.aggregate([{'$lookup': {'from': 'film', 'localField': 'film_id', 'foreignField': 'film_id', 'as': 'film_details'}}, {'$unwind': '$film_details'}, {'$group': {'_id': {'store_id': '$store_id', 'title': '$film_details.title'}}}, {'$group': {'_id': '$_id.store_id', 'films_per_store': {'$sum': 1}}}])
+data_processing  |
+data_processing  | +----------+-----------------+
+data_processing  | | Store ID | Films per Store |
+data_processing  | +----------+-----------------+
+data_processing  | |    2     |       762       |
+data_processing  | |    1     |       759       |
+data_processing  | +----------+-----------------+
+data_processing  |
+data_processing  | C: Top 10 actors by number of films:
+data_processing  |
+data_processing  | Command: mongo_db.film_actor.aggregate([{'$group': {'_id': '$actor_id', 'film_count': {'$sum': 1}}}, {'$sort': {'film_count': -1}}, {'$limit': 10}])
+data_processing  |
+data_processing  | +------------+-------------+------------+
+data_processing  | | First Name |  Last Name  | Film Count |
+data_processing  | +------------+-------------+------------+
+data_processing  | |    Gina    |  Degeneres  |     42     |
+data_processing  | |   Walter   |     Torn    |     41     |
+data_processing  | |    Mary    |    Keitel   |     40     |
+data_processing  | |  Matthew   |    Carrey   |     39     |
+data_processing  | |   Sandra   |    Kilmer   |     37     |
+data_processing  | |  Scarlett  |    Damon    |     36     |
+data_processing  | |    Uma     |     Wood    |     35     |
+data_processing  | |   Angela   | Witherspoon |     35     |
+data_processing  | |   Henry    |    Berry    |     35     |
+data_processing  | |    Val     |    Bolger   |     35     |
+data_processing  | +------------+-------------+------------+
+data_processing  |
+data_processing  | D: Revenue per staff member:
+data_processing  |
+data_processing  | Command: mongo_db.payment.aggregate([{'$group': {'_id': '$staff_id', 'total_revenue': {'$sum': '$amount'}}}, {'$sort': {'total_revenue': -1}}])
+data_processing  |
+data_processing  | +------------+-----------+---------------+
+data_processing  | | First Name | Last Name | Total Revenue |
+data_processing  | +------------+-----------+---------------+
+data_processing  | |    Jon     |  Stephens |   $31059.92   |
+data_processing  | |    Mike    |  Hillyer  |   $30252.12   |
+data_processing  | +------------+-----------+---------------+
+data_processing  |
+data_processing  | E: Top 10 customers by number of rentals:
+data_processing  |
+data_processing  | Command: mongo_db.rental.aggregate([{'$group': {'_id': '$customer_id', 'rental_count': {'$sum': 1}}}, {'$sort': {'rental_count': -1}}, {'$limit': 10}])
+data_processing  |
+data_processing  | +-------------+------------+-----------+--------------+
+data_processing  | | Customer ID | First Name | Last Name | Rental Count |
+data_processing  | +-------------+------------+-----------+--------------+
+data_processing  | |     148     |  Eleanor   |    Hunt   |      46      |
+data_processing  | |     526     |    Karl    |    Seal   |      45      |
+data_processing  | |     144     |   Clara    |    Shaw   |      42      |
+data_processing  | |     236     |   Marcia   |    Dean   |      42      |
+data_processing  | |      75     |   Tammy    |  Sanders  |      41      |
+data_processing  | |     197     |    Sue     |   Peters  |      40      |
+data_processing  | |     469     |   Wesley   |    Bull   |      40      |
+data_processing  | |     178     |   Marion   |   Snyder  |      39      |
+data_processing  | |     137     |   Rhonda   |  Kennedy  |      39      |
+data_processing  | |     468     |    Tim     |    Cary   |      39      |
+data_processing  | +-------------+------------+-----------+--------------+
+data_processing  |
+data_processing  | F: Top 10 customers by total spending:
+data_processing  |
+data_processing  | Command: mongo_db.payment.aggregate([{'$group': {'_id': '$customer_id', 'total_spent': {'$sum': '$amount'}}}, {'$sort': {'total_spent': -1}}, {'$limit': 10}, {'$lookup': {'from': 'customer', 'localField': '_id', 'foreignField': 'customer_id', 'as': 'customer_info'}}, {'$unwind': '$customer_info'}, {'$project': {'customer_id': '$_id', 'total_spent': 1, 'first_name': '$customer_info.first_name', 'last_name': '$customer_info.last_name', 'store_id': '$customer_info.store_id'}}])
+data_processing  |
+data_processing  | +------------+-----------+----------+-------------+
+data_processing  | | First Name | Last Name | Store ID | Total Spent |
+data_processing  | +------------+-----------+----------+-------------+
+data_processing  | |  Eleanor   |    Hunt   |    1     |   $211.55   |
+data_processing  | |    Karl    |    Seal   |    2     |   $208.58   |
+data_processing  | |   Marion   |   Snyder  |    2     |   $194.61   |
+data_processing  | |   Rhonda   |  Kennedy  |    2     |   $191.62   |
+data_processing  | |   Clara    |    Shaw   |    1     |   $189.60   |
+data_processing  | |   Tommy    |  Collazo  |    1     |   $183.63   |
+data_processing  | |    Ana     |  Bradley  |    2     |   $167.67   |
+data_processing  | |   Curtis   |    Irby   |    2     |   $167.62   |
+data_processing  | |   Marcia   |    Dean   |    1     |   $166.61   |
+data_processing  | |    Mike    |    Way    |    1     |   $162.67   |
+data_processing  | +------------+-----------+----------+-------------+
+data_processing  |
+data_processing  | G: Top 10 most-watched movies:
+data_processing  |
+data_processing  | Command: mongo_db.rental.aggregate([{'$group': {'_id': '$inventory_id', 'rental_count': {'$sum': 1}}}, {'$lookup': {'from': 'inventory', 'localField': '_id', 'foreignField': 'inventory_id', 'as': 'inventory_details'}}, {'$unwind': '$inventory_details'}, {'$lookup': {'from': 'film', 'localField': 'inventory_details.film_id', 'foreignField': 'film_id', 'as': 'film_details'}}, {'$unwind': '$film_details'}, {'$group': {'_id': {'film_id': '$inventory_details.film_id', 'title': '$film_details.title'}, 'total_rentals': {'$sum': '$rental_count'}}}, {'$sort': {'total_rentals': -1}}, {'$limit': 10}])
+data_processing  |
+data_processing  | +---------------------+---------------+
+data_processing  | |      Film Title     | Total Rentals |
+data_processing  | +---------------------+---------------+
+data_processing  | |  Bucket Brotherhood |       34      |
+data_processing  | |   Rocketeer Mother  |       33      |
+data_processing  | | Ridgemont Submarine |       32      |
+data_processing  | |    Forward Temple   |       32      |
+data_processing  | |    Scalawag Duck    |       32      |
+data_processing  | |    Grit Clockwork   |       32      |
+data_processing  | |    Juggler Hardly   |       32      |
+data_processing  | |  Goodfellas Salute  |       31      |
+data_processing  | |     Hobbit Alien    |       31      |
+data_processing  | |     Network Peak    |       31      |
+data_processing  | +---------------------+---------------+
+data_processing  |
+data_processing  | H: Top 3 most-watched movie categories:
+data_processing  |
+data_processing  | Command: mongo_db.rental.aggregate([{'$lookup': {'from': 'inventory', 'localField': 'inventory_id', 'foreignField': 'inventory_id', 'as': 'inventory_details'}}, {'$unwind': '$inventory_details'}, {'$lookup': {'from': 'film', 'localField': 'inventory_details.film_id', 'foreignField': 'film_id', 'as': 'film_details'}}, {'$unwind': '$film_details'}, {'$lookup': {'from': 'film_category', 'localField': 'film_details.film_id', 'foreignField': 'film_id', 'as': 'film_category_details'}}, {'$unwind': '$film_category_details'}, {'$lookup': {'from': 'category', 'localField': 'film_category_details.category_id', 'foreignField': 'category_id', 'as': 'category_details'}}, {'$unwind': '$category_details'}, {'$group': {'_id': '$category_details.name', 'total_rentals': {'$sum': 1}}}, {'$sort': {'total_rentals': -1}}, {'$limit': 3}])
+data_processing  |
+data_processing  | +-----------+---------------+
+data_processing  | |  Category | Total Rentals |
+data_processing  | +-----------+---------------+
+data_processing  | |   Sports  |      1179     |
+data_processing  | | Animation |      1166     |
+data_processing  | |   Action  |      1112     |
+data_processing  | +-----------+---------------+
+data_processing  |
+data_processing  | I: A view of customer list:
+data_processing  |
+data_processing  | Command: mongo_db.customer_list.find().limit(15)
+data_processing  |
+data_processing  | +-------------+------------------+------------------------------------+-------------+--------------+----------------+---------------+--------+-----+
+data_processing  | | Customer ID |       Name       |              Address               | Postal Code |    Phone     |      City      |    Country    | Active | SID |
+data_processing  | +-------------+------------------+------------------------------------+-------------+--------------+----------------+---------------+--------+-----+
+data_processing  | |      1      |    Mary Smith    |           1913 Hanoi Way           |    35200    | 28303384290  |     Sasebo     |     Japan     | active |  1  |
+data_processing  | |      2      | Patricia Johnson |          1121 Loja Avenue          |    17886    | 838635286649 | San Bernardino | United States | active |  1  |
+data_processing  | |      3      |  Linda Williams  |         692 Joliet Street          |    83579    | 448477190408 |    Athenai     |     Greece    | active |  1  |
+data_processing  | |      4      |  Barbara Jones   |          1566 Inegl Manor          |    53561    | 705814003527 |    Myingyan    |    Myanmar    | active |  2  |
+data_processing  | |      5      | Elizabeth Brown  |          53 Idfu Parkway           |    42399    | 10655648674  |     Nantou     |     Taiwan    | active |  1  |
+data_processing  | |      6      |  Jennifer Davis  |  1795 Santiago de Compostela Way   |    18743    | 860452626434 |     Laredo     | United States | active |  2  |
+data_processing  | |      7      |   Maria Miller   | 900 Santiago de Compostela Parkway |    93896    | 716571220373 |   Kragujevac   |   Yugoslavia  | active |  1  |
+data_processing  | |      8      |   Susan Wilson   |           478 Joliet Way           |    77948    | 657282285970 |    Hamilton    |  New Zealand  | active |  2  |
+data_processing  | |      9      |  Margaret Moore  |         613 Korolev Drive          |    45844    | 380657522649 |     Masqat     |      Oman     | active |  2  |
+data_processing  | |      10     |  Dorothy Taylor  |           1531 Sal Drive           |    53628    | 648856936185 |    Esfahan     |      Iran     | active |  1  |
+data_processing  | +-------------+------------------+------------------------------------+-------------+--------------+----------------+---------------+--------+-----+
+data_processing  |
+data_processing  | ---------- UPDATE ----------
+data_processing  |
+data_processing  | A: Assign a new secure password to all staff members
+data_processing  | Verifying password for staff member Mike Hillyer: 8cb2237d0679ca88db6464eac60da96345513964
+data_processing  | Verifying password for staff member Jon Stephens: 8cb2237d0679ca88db6464eac60da96345513964
+data_processing  |
+data_processing  |
+data_processing  | Command: mongo_db.staff.update_one({"staff_id": staff["staff_id"]},{"$set": {"password": hashed_password}})
+data_processing  |
+data_processing  | Password for staff member Mike Hillyer has been updated to f19f21ae0bd5621f17bb80591d47224920649d2095509af4db165c721b8da5dc.
+data_processing  | Password for staff member Jon Stephens has been updated to 22c2d8d349f91e796bb96ab34decb3f8f29a0e9bea7b9026e155e839b7feac7d.
+data_processing  |
+data_processing  | Verifying password for staff member Mike Hillyer: f19f21ae0bd5621f17bb80591d47224920649d2095509af4db165c721b8da5dc
+data_processing  | Verifying password for staff member Jon Stephens: 22c2d8d349f91e796bb96ab34decb3f8f29a0e9bea7b9026e155e839b7feac7d
+data_processing  |
+data_processing  | B: Create new location and transfer inventory
+data_processing  | Command: mongo_db.store.insert_one({'store_id': 3, 'address': '123 New Location Street', 'city': 'Fictional City', 'country': 'Fictionland', 'phone': '123-456-7890', '_id': ObjectId('6756ca2a26ad72226732968d')})
+data_processing  | Command: mongo_db.inventory.update_many({},{"$set": {"store_id": new_store_id}})
+data_processing  |
+data_processing  | New location 3 created and inventory transferred.
+data_processing  |
+data_processing  | New location successfully created: 3 - 123 New Location Street
+data_processing  | Inventory successfully transferred to new location 3. Number of items: 4581
+data_processing  |
+data_processing  | ---------- DELETE ----------
+data_processing  |
+data_processing  | Before deletion:
+data_processing  | Total Films: 1000
+data_processing  | Total Rentals: 16044
+data_processing  |
+data_processing  | Command: list(mongo_db.film.find({"length": {"$lt": 60}})) #Find short films (duration < 60 minutes)
+data_processing  | Command: inventory_docs = mongo_db.inventory.find({"film_id": {"$in": film_ids_to_delete}})
+data_processing  | Command: inventory_ids_to_delete = [doc["inventory_id"] for doc in inventory_docs if "inventory_id" in doc]
+data_processing  | Command: mongo_db.rental.delete_many({"inventory_id": {"$in": inventory_ids_to_delete}})
+data_processing  |
+data_processing  | Command: film_ids_to_delete = [film["film_id"] for film in short_films if "film_id" in film]
+data_processing  | Command: mongo_db.film.delete_many({"film_id": {"$in": film_ids_to_delete}})
+data_processing  |
+data_processing  | Deleted 96 short films.
+data_processing  | After deletion:
+data_processing  | Total Films: 904
+data_processing  | Total Rentals: 14513
